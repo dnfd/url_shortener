@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/asaskevich/govalidator"
@@ -18,7 +19,10 @@ import (
 )
 
 var (
-	port = flag.String("port", "8080", "Port to bind")
+	port   = flag.String("port", "8080", "Port to bind")
+	dbUser = flag.String("dbUser", "root", "DB User")
+	dbPass = flag.String("dbPass", "", "DB Pass")
+	dbHost = flag.String("dbHost", "localhost:3306", "DB Host")
 
 	db    *sqlx.DB
 	cache *lru.Cache
@@ -124,7 +128,7 @@ func main() {
 	var err error
 	flag.Parse()
 
-	db = sqlx.MustConnect("mysql", "root:@(localhost:3306)/url_shortener")
+	db = sqlx.MustConnect("mysql", fmt.Sprintf("%s:%s@(%s)/url_shortener", *dbUser, *dbPass, *dbHost))
 	cache, err = lru.New(128)
 	if err != nil {
 		log.Panic(err)
@@ -134,6 +138,7 @@ func main() {
 
 	r.POST("/urls/new", addURL)
 
+	log.Println("Listening", *port)
 	err = fasthttp.ListenAndServe(":"+*port, route(redirect, r))
 	log.Println(err)
 }
