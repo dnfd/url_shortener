@@ -7,7 +7,7 @@ import (
 var elems = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
 // IDToShortURL generates short URL based on integer id.
-func IDToURL(id uint64) []byte {
+func IDToURL(id int64) []byte {
 	var url []byte
 
 	for id > 0 {
@@ -19,19 +19,19 @@ func IDToURL(id uint64) []byte {
 }
 
 // URLToID restores id from short URL.
-func URLToID(url []byte) (uint64, error) {
-	var id uint64
+func URLToID(url []byte) (int64, error) {
+	var id int64
 
 	for _, b := range url {
 		switch {
 		case 'a' <= b && b <= 'z':
-			id = id*62 + uint64(b-'a')
+			id = id*62 + int64(b-'a')
 
 		case 'A' <= b && b <= 'Z':
-			id = id*62 + uint64(b-'A') + 26
+			id = id*62 + int64(b-'A') + 26
 
 		case '0' <= b && b <= '9':
-			id = id*62 + uint64(b-'0') + 52
+			id = id*62 + int64(b-'0') + 52
 
 		default:
 			return id, fmt.Errorf("URL contains unsupported symbol %q", b)

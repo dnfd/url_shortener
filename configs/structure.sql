@@ -24,9 +24,9 @@ DROP TABLE IF EXISTS `urls`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `urls` (
   `id` int(5) NOT NULL AUTO_INCREMENT,
-  `url` varchar(511) DEFAULT NULL,
+  `url` varchar(511) NOT NULL UNIQUE,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
