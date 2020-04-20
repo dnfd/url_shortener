@@ -80,7 +80,8 @@ func addURL(ctx *fasthttp.RequestCtx) {
 	}
 
 	ctx.SetStatusCode(201)
-	ctx.WriteString("localhost:8080/")
+	ctx.Write(ctx.Host())
+	ctx.WriteString("/")
 	ctx.Write(urlconverter.IDToURL(id))
 	ctx.WriteString("\n")
 }
