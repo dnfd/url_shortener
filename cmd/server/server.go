@@ -8,6 +8,7 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/fasthttp/router"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/jmoiron/sqlx"
 	"github.com/valyala/fasthttp"
 
@@ -19,7 +20,8 @@ import (
 var (
 	port = flag.String("port", "8080", "Port to bind")
 
-	db *sqlx.DB
+	db    *sqlx.DB
+	cache *lru.Cache
 )
 
 func route(defaultHandler fasthttp.RequestHandler, r *router.Router) fasthttp.RequestHandler {
@@ -35,21 +37,14 @@ func route(defaultHandler fasthttp.RequestHandler, r *router.Router) fasthttp.Re
 }
 
 func redirect(ctx *fasthttp.RequestCtx) {
-	id, err := urlconverter.URLToID(ctx.Path()[1:]) // skip '/'
-	if err != nil {
-		ctx.WriteString(err.Error())
-		ctx.SetStatusCode(422)
-		return
-	}
-
-	url, err := getURL(id)
+	url, err := getURL(ctx.Path()[1:]) // skip '/'
 	if err == sql.ErrNoRows {
 		ctx.SetStatusCode(404)
 		return
 	}
 
 	if err != nil {
-		ctx.SetStatusCode(500)
+		ctx.SetStatusCode(422)
 		log.Println(err)
 		return
 	}
@@ -104,22 +99,40 @@ func persistURL(url string) (int64, error) {
 	return id, err
 }
 
-func getURL(id int64) (string, error) {
+func getURL(shortURL []byte) (string, error) {
+	cached, ok := cache.Get(string(shortURL))
+	if ok {
+		return cached.(string), nil
+	}
+
 	var url string
-	err := db.Get(&url, "SELECT url from urls WHERE id = ?", id)
+	id, err := urlconverter.URLToID(shortURL)
+	if err != nil {
+		return url, err
+	}
+
+	err = db.Get(&url, "SELECT url from urls WHERE id = ?", id)
+	if err == nil {
+		cache.Add(string(shortURL), url)
+	}
 
 	return url, err
 }
 
 func main() {
+	var err error
 	flag.Parse()
 
 	db = sqlx.MustConnect("mysql", "root:@(localhost:3306)/url_shortener")
+	cache, err = lru.New(128)
+	if err != nil {
+		log.Panic(err)
+	}
 
 	r := router.New()
 
 	r.POST("/urls/new", addURL)
 
-	err := fasthttp.ListenAndServe(":"+*port, route(redirect, r))
+	err = fasthttp.ListenAndServe(":"+*port, route(redirect, r))
 	log.Println(err)
 }
